@@ -21,7 +21,7 @@ module Data.Array.Accelerate.CUDA.Array.Data (
   -- * Array operations and representations
   mallocArray, freeArray,
   indexArray,
-  useArray,  useArrayAsync, useArraySlice,
+  useArray,  useArrayAsync,
   useDevicePtrs,
   copyArray, copyArrayAsync, copyArrayPeer, copyArrayPeerAsync,
   peekArray, peekArrayAsync,
