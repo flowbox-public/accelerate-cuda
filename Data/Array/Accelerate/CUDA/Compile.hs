@@ -78,11 +78,7 @@ import System.Time
 
 -- Multiplatform support for dealing with external process spawning
 #if   defined(UNIX)
-import System.Posix.Process
-#elif defined(WIN32)
-import System.Win32.Process
-#else
-#error "I don't know what operating system I am"
+import System.Posix.Process                                     ( getProcessID )
 #endif
 
 import Paths_accelerate_cuda                                    ( getDataDir )
@@ -495,7 +491,7 @@ openTemporaryFile template = liftIO $ do
 --      current process? For new, just use a dummy value (the sound of
 --      disappearing down a rabbit hole...)
 --
-getProcessID :: IO ProcessId
+-- getProcessID :: IO ProcessId
 getProcessID = return 0xaaaa
 #endif
 
