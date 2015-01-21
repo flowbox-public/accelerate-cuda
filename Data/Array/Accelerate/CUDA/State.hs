@@ -85,7 +85,7 @@ evalCUDA !ctx !acc =
   \e -> $internalError "unhandled" (show (e :: CUDAException))
   where
     setup       = push ctx
-    teardown    = pop >> performGC
+    teardown    = pop -- >> performGC -- this performGC cost a lot in interpreted env.
     action      = evalStateT (runReaderT (runCIO acc) ctx) theState
 
 
