@@ -218,7 +218,6 @@ insertRemote !ctx (MemoryTable !ref !weak_ref _) !arr !ptr = do
 reclaim :: MemoryTable -> IO ()
 reclaim (MemoryTable _ weak_ref (Nursery nrs _)) = do
   (before, total) <- CUDA.getMemInfo
-  performGC
   yield
   withMVar nrs N.flush
   mr <- deRefWeak weak_ref
