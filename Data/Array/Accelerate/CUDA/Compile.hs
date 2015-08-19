@@ -572,6 +572,7 @@ compileFlags cufile = do
   debug                 <- liftIO $ D.queryFlag D.debug_cc
   return                $  filter (not . null) $
     [ "-I", ddir </> "cubits"
+    , "-std=c++11"
     , "-arch=sm_" ++ show m ++ show n
     , "-cubin"
 --    , "--restrict"    -- requires nvcc >= 5.0
