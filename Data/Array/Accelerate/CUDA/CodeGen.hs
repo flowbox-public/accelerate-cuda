@@ -384,7 +384,7 @@ codegenOpenExp dev aenv = cvtE
           (b,r) <- clean $ single "primApp" <$> cvtE e env
           if null b
              then return r
-             else return [cexp| ({ $items:b; $exp:r; }) |]
+             else return [cexp| [&]{ $items:b; return $exp:r; }() |]
 
     -- Convert an open expression into a sequence of C expressions. We retain
     -- snoc-list ordering, so the element at tuple index zero is at the end of

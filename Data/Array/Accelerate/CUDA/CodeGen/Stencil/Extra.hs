@@ -192,7 +192,7 @@ cinRange :: [C.Exp] -> [C.Exp] -> C.Exp
 cinRange []    []    = $internalError "inRange" "singleton index"
 cinRange shape index = foldl1 and (zipWith inside shape index)
   where
-    inside sz i = [cexp| ({ const $ty:cint _i = $exp:i; _i >= 0 && _i < $exp:sz; }) |]
+    inside sz i = [cexp| [&]{ const $ty:cint _i = $exp:i; return _i >= 0 && _i < $exp:sz; }() |]
     and x y     = [cexp| $exp:x && $exp:y |]
 
 -- Clamp an index to the boundary of the shape (first argument)
@@ -208,22 +208,22 @@ cclamp = zipWith f
 cmirror :: [C.Exp] -> [C.Exp] -> [C.Exp]
 cmirror = zipWith f
   where
-    f sz i = [cexp| ({ const $ty:cint _i  = $exp:i;
+    f sz i = [cexp| [&]{ const $ty:cint _i  = $exp:i;
                        const $ty:cint _sz = $exp:sz;
-                      _i < 0    ? -_i
+                      return _i < 0    ? -_i
                     : _i >= _sz ?  _sz - (_i - _sz + 2)
-                    : _i; }) |]
+                    : _i; }() |]
 
 -- Indices out of bounds are wrapped to the opposite edge of the shape
 --
 cwrap :: [C.Exp] -> [C.Exp] -> [C.Exp]
 cwrap = zipWith f
   where
-    f sz i = [cexp| ({ const $ty:cint _i  = $exp:i;
+    f sz i = [cexp| [&]{ const $ty:cint _i  = $exp:i;
                        const $ty:cint _sz = $exp:sz;
-                    _i < 0    ? _sz + _i
+                    return _i < 0    ? _sz + _i
                   : _i >= _sz ? _i  - _sz
-                  : _i; }) |]
+                  : _i; }() |]
 
 
 -- Kernel parameters
@@ -276,4 +276,3 @@ zipWith3 _ _      _      _      = $internalError "zipWith3" "argument mismatch"
 unconcat :: [Int] -> [a] -> [[a]]
 unconcat []     _  = []
 unconcat (n:ns) xs = let (h,t) = splitAt n xs in h : unconcat ns t
-
