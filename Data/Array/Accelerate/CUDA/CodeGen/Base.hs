@@ -202,7 +202,7 @@ ctoIndex extent index
 cfromIndex :: (Rvalue sh, Rvalue ix) => [sh] -> ix -> Name -> ([C.BlockItem], [C.Exp])
 cfromIndex shName ixName tmpName = fromIndex (map rvalue shName) (rvalue ixName)
   where
-    fromIndex [sh]   ix = ([], [[cexp| ({ assert( $exp:ix >= 0 && $exp:ix < $exp:sh ); $exp:ix; }) |]])
+    fromIndex [sh]   ix = ([], [[cexp| [&]{ assert( $exp:ix >= 0 && $exp:ix < $exp:sh ); return $exp:ix; }() |]])
     fromIndex extent ix = let ((env, _, _), sh) = mapAccumR go ([], ix, 0) extent
                           in  (reverse env, sh)
 
@@ -479,4 +479,3 @@ zipWith3 :: (a -> b -> c -> d) -> [a] -> [b] -> [c] -> [d]
 zipWith3 f (x:xs) (y:ys) (z:zs) = f x y z : zipWith3 f xs ys zs
 zipWith3 _ []     []     []     = []
 zipWith3 _ _      _      _      = $internalError "zipWith3" "argument mismatch"
-
