@@ -461,7 +461,7 @@ compileFlags cufile = do
   ddir                  <- liftIO getDataDir
   return                $  filter (not . null) $
     [ "-I", ddir </> "cubits"
-    , "std=c++11"
+    , "-std=c++11"
     , "-arch=sm_" ++ show m ++ show n
     , "-cubin"
 --    , "--restrict"    -- requires nvcc >= 5.0
