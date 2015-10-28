@@ -194,7 +194,7 @@ module Data.Array.Accelerate.CUDA (
 
   -- * Execution contexts
   Context, create, destroy,
-  unsafeFreeArrays, performGC,
+  unsafeFreeArrays, unsafeFreeArrays', performGC,
 
 ) where
 
@@ -214,6 +214,7 @@ import Data.Array.Accelerate.CUDA.State
 import Data.Array.Accelerate.CUDA.Context
 import Data.Array.Accelerate.CUDA.Compile
 import Data.Array.Accelerate.CUDA.Execute
+import Debug.Trace
 
 #if ACCELERATE_DEBUG
 import Data.Array.Accelerate.Debug
@@ -231,8 +232,14 @@ import Data.Array.Accelerate.Debug
 --
 run :: Arrays a => Acc a -> a
 run a
-  = unsafePerformIO
-  $ evaluate (runIn defaultContext a)
+  = unsafePerformIO $ do
+      putStr "run enter\n"
+      appendFile "acc.log" "run enter\n"
+      r <- evaluate (runIn defaultContext a)
+      putStr "run exit\n"
+      appendFile "acc.log" "run exit\n"
+      return r
+
 
 -- | As 'run', but allow the computation to continue running in a thread and
 -- return immediately without waiting for the result. The status of the
@@ -263,7 +270,27 @@ runIn :: Arrays a => Context -> Acc a -> a
 runIn ctx a = unsafePerformIO execute
   where
     !acc    = convertAccWith config a
-    execute = evalCUDA ctx (compileAcc acc >>= dumpStats >>= executeAcc >>= collect)
+    execute = evalCUDA ctx $ do
+        liftIO $ appendFile "acc.log" "- compileAcc\n"
+        liftIO $ putStr "- compileAcc\n"
+        a <- compileAcc acc
+        liftIO $ appendFile "acc.log" "- dumpStats\n"
+        liftIO $ putStr "- dumpStats\n"
+
+        b <- dumpStats a
+        liftIO $ appendFile "acc.log" "- executeAcc\n"
+        liftIO $ putStr "- executeAcc\n"
+        c <- executeAcc b
+        liftIO $ appendFile "acc.log" "- collect\n"
+        liftIO $ putStr "- collect\n"
+        d <- collect c
+        liftIO $ appendFile "acc.log" "- unsafeFreeArrays'\n"
+        liftIO $ putStr "- unsafeFreeArrays'\n"
+        fr c
+        liftIO $ appendFile "acc.log" "+ unsafeFreeArrays'\n"
+        liftIO $ putStr "+ unsafeFreeArrays'\n"
+        fr d
+    fr a = unsafeFreeArrays' a >> return a
 
 
 -- | As 'runIn', but execute asynchronously. Be sure not to destroy the context,
@@ -274,7 +301,8 @@ runAsyncIn :: Arrays a => Context -> Acc a -> Async a
 runAsyncIn ctx a = unsafePerformIO $ async execute
   where
     !acc    = convertAccWith config a
-    execute = evalCUDA ctx (compileAcc acc >>= dumpStats >>= executeAcc >>= collect)
+    execute = evalCUDA ctx (compileAcc acc >>= dumpStats >>= executeAcc >>= collect >>= fr)
+    fr a = unsafeFreeArrays' a >> return a
 
 
 -- | Prepare and execute an embedded array program of one argument.
@@ -311,8 +339,13 @@ runAsyncIn ctx a = unsafePerformIO $ async execute
 --
 run1 :: (Arrays a, Arrays b) => (Acc a -> Acc b) -> a -> b
 run1 f
-  = unsafePerformIO
-  $ evaluate (run1In defaultContext f)
+  = unsafePerformIO $ do
+      appendFile "acc.log" "run1 enter\n"
+      putStr "run1 enter\n"
+      r <- evaluate (run1In defaultContext f)
+      putStr "run1 exit\n"
+      appendFile "acc.log" "run1 exit\n"
+      return r
 
 
 -- | As 'run1', but the computation is executed asynchronously.
@@ -404,19 +437,27 @@ dumpStats next = return next
 -- This is unsafe in the sense that it is possible to call this function while
 -- the array is currently in use.
 --
+unsafeFreeArrays' :: forall arrs. Arrays arrs => arrs -> CIO ()
+unsafeFreeArrays' !arrs = do
+    liftIO $ putStr "unsafeFreeArrays' enter\n"
+    liftIO $ appendFile "acc.log" "unsafeFreeArrays' enter\n"
+    r <- trace "unsafeFree" $ freeR (arrays (undefined :: arrs)) (fromArr arrs)
+    liftIO $ putStr "unsafeFreeArrays' exit\n"
+    liftIO $ appendFile "acc.log" "unsafeFreeArrays' exit\n"
+    return r
+
 unsafeFreeArrays :: forall arrs. Arrays arrs => arrs -> IO ()
 unsafeFreeArrays !arrs
   = evalCUDA defaultContext
   $ freeR (arrays (undefined :: arrs)) (fromArr arrs)
-  where
-    freeR :: ArraysR a -> a -> CIO ()
-    freeR ArraysRunit             ()             = return ()
-    freeR ArraysRarray            arr            = freeArray arr
-    freeR (ArraysRpair aeR1 aeR2) (arrs1, arrs2) = freeR aeR1 arrs1 >> freeR aeR2 arrs2
+
+freeR :: ArraysR a -> a -> CIO ()
+freeR ArraysRunit             ()             = return ()
+freeR ArraysRarray            arr            = freeArray arr
+freeR (ArraysRpair aeR1 aeR2) (arrs1, arrs2) = freeR aeR1 arrs1 >> freeR aeR2 arrs2
 
 
 -- Release any unused device memory
 --
 performGC :: IO ()
 performGC = evalCUDA defaultContext cleanupArrayData
-

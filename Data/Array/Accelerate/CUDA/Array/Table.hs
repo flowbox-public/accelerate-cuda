@@ -154,6 +154,8 @@ lookup ctx (MemoryTable !ref _ _) !arr = do
 --
 malloc :: forall a b. (Typeable a, Typeable b, Storable b) => Context -> MemoryTable -> ArrayData a -> Int -> IO (DevicePtr b)
 malloc !ctx mt@(MemoryTable _ _ !nursery) !ad !n = do
+  appendFile "acc.log" "malloc enter\n"
+  putStr "malloc enter\n"
   let -- next highest multiple of f from x
       multiple x f      = floor ((x + (f-1)) / f :: Double)
       chunk             = 128
@@ -170,6 +172,8 @@ malloc !ctx mt@(MemoryTable _ _ !nursery) !ad !n = do
                  ExitCode OutOfMemory -> reclaim mt >> CUDA.mallocArray n'
                  _                    -> throwIO e
   insert ctx mt ad ptr bytes
+  putStr "malloc exit\n"
+  appendFile "acc.log" "malloc exit\n"
   return ptr
 
 
@@ -179,11 +183,15 @@ malloc !ctx mt@(MemoryTable _ _ !nursery) !ad !n = do
 --
 free :: Typeable a => Context -> MemoryTable -> ArrayData a -> IO ()
 free !ctx (MemoryTable !ref _ _) !arr = do
+  putStr "free enter\n"
+  appendFile "acc.log" "free enter\n"
   sa <- makeStableArray ctx arr
   mw <- withMVar ref (`HT.lookup` sa)
   case mw of
     Nothing              -> message ("free/not found: " ++ show sa)
     Just (DeviceArray w) -> trace   ("free/evict: " ++ show sa) $ finalize w
+  putStr "free exit\n"
+  appendFile "acc.log" "free exit\n"
 
 
 -- Record an association between a host-side array and a new device memory area.
@@ -246,6 +254,8 @@ reclaim (MemoryTable _ weak_ref (Nursery nrs _)) = do
 --
 finalizer :: Weak CUDA.Context -> Weak MT -> Weak NRS -> HostArray -> DevicePtr b -> Int -> IO ()
 finalizer !weak_ctx !weak_ref !weak_nrs !key !ptr !bytes = do
+  putStr "finalizer enter\n"
+  appendFile "acc.log" "finalizer enter\n"
   mr <- deRefWeak weak_ref
   case mr of
     Nothing  -> message ("finalise/dead table: " ++ show key)
@@ -260,6 +270,8 @@ finalizer !weak_ctx !weak_ref !weak_nrs !key !ptr !bytes = do
       case mn of
         Nothing  -> trace ("finalise/free: "     ++ show key) $ bracket_ (CUDA.push ctx) CUDA.pop (CUDA.free ptr)
         Just nrs -> trace ("finalise/nursery: "  ++ show key) $ N.stash bytes ctx nrs ptr
+  putStr "finalizer exit\n"
+  appendFile "acc.log" "finalizer exit\n"
 
 remoteFinalizer :: Weak MT -> HostArray -> IO ()
 remoteFinalizer !weak_ref !key = do
@@ -300,4 +312,3 @@ trace msg next = D.message D.dump_gc ("gc: " ++ msg) >> next
 {-# INLINE message #-}
 message :: String -> IO ()
 message s = s `trace` return ()
-
