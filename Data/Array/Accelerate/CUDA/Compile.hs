@@ -459,9 +459,13 @@ compileFlags :: FilePath -> CIO [String]
 compileFlags cufile = do
   CUDA.Compute m n      <- CUDA.computeCapability `fmap` asks deviceProperties
   ddir                  <- liftIO getDataDir
+  let possibleCudaDir   =  ddir </> "cubits"
+  cudaDirExists         <- liftIO $ doesDirectoryExist possibleCudaDir
   return                $  filter (not . null) $
-    [ "-I", ddir </> "cubits"
-    , "-std=c++11"
+    -- If we relocated program from another machines, adding this path might cause nvcc to fail.
+    if cudaDirExists then [ "-I", ddir </> "cubits"] else []
+    <>
+    [ "-std=c++11"
     , "-arch=sm_" ++ show m ++ show n
     , "-cubin"
 --    , "--restrict"    -- requires nvcc >= 5.0
@@ -599,4 +603,3 @@ message msg = trace msg $ return ()
 {-# INLINE trace #-}
 trace :: MonadIO m => String -> m a -> m a
 trace msg next = D.message D.dump_cc ("cc: " ++ msg) >> next
-
