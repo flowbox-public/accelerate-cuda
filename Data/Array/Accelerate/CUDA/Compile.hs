@@ -570,9 +570,13 @@ compileFlags cufile = do
   ddir                  <- liftIO getDataDir
   warnings              <- liftIO $ (&&) <$> D.queryFlag D.dump_cc <*> D.queryFlag D.verbose
   debug                 <- liftIO $ D.queryFlag D.debug_cc
+  let possibleCudaDir   =  ddir </> "cubits"
+  cudaDirExists         <- liftIO $ doesDirectoryExist possibleCudaDir
   return                $  filter (not . null) $
-    [ "-I", ddir </> "cubits"
-    , "-std=c++11"
+    -- If we relocated program from another machines, adding this path might cause nvcc to fail.
+    (if cudaDirExists then [ "-I", ddir </> "cubits"] else [])
+    <>
+    [ "-std=c++11"
     , "-arch=sm_" ++ show m ++ show n
     , "-cubin"
 --    , "--restrict"    -- requires nvcc >= 5.0
