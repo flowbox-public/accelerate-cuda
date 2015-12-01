@@ -181,9 +181,6 @@ mkPermute dev aenv (CUFun2 dce_x dce_y combine) (CUFun1 dce_p prj) arr
         typename Int32 * __restrict__ lock
     )
     {
-        /*
-         * The input shape might be a complex expression. Evaluate it first to reuse the result.
-         */
         $items:(sh .=. shIn)
 
         const int shapeSize             = $exp:(csize sh);

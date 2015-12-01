@@ -146,9 +146,6 @@ mkFoldAll' recursive dev aenv fun@(CUFun2 _ _ combine) mseed (CUDelayed (CUExp s
          */
         if ( ix < shapeSize )
         {
-            /*
-             * Initialise the local sum, then ...
-             */
             $items:(y .=. get ix)
 
             /*
