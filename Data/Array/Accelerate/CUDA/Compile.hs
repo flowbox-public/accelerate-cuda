@@ -463,7 +463,7 @@ compileFlags cufile = do
   cudaDirExists         <- liftIO $ doesDirectoryExist possibleCudaDir
   return                $  filter (not . null) $
     -- If we relocated program from another machines, adding this path might cause nvcc to fail.
-    if cudaDirExists then [ "-I", ddir </> "cubits"] else []
+    (if cudaDirExists then [ "-I", ddir </> "cubits"] else [])
     <>
     [ "-std=c++11"
     , "-arch=sm_" ++ show m ++ show n
