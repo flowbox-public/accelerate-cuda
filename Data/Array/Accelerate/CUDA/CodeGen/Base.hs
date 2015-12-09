@@ -190,7 +190,7 @@ ctoIndex extent index
 cfromIndex :: (Rvalue sh, Rvalue ix) => [sh] -> ix -> Name -> ([C.BlockItem], [C.Exp])
 cfromIndex shName ixName tmpName = fromIndex (map rvalue shName) (rvalue ixName)
   where
-    fromIndex [sh]   ix = ([], [[cexp| ({ assert( $exp:ix >= 0 && $exp:ix < $exp:sh ); $exp:ix; }) |]])
+    fromIndex [sh]   ix = ([], [[cexp| [&]{ assert( $exp:ix >= 0 && $exp:ix < $exp:sh ); return $exp:ix; }() |]])
     fromIndex extent ix = let ((env, _, _), sh) = mapAccumR go ([], ix, 0) extent
                           in  (reverse env, sh)
 
