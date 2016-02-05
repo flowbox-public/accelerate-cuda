@@ -431,6 +431,8 @@ compileFlags = do
   ddir                  <- liftIO getDataDir
   let possibleCudaDir   =  ddir </> "cubits"
   cudaDirExists         <- liftIO $ doesDirectoryExist possibleCudaDir
+  let warnings = D.mode D.dump_cc && D.mode D.verbose
+      debug    = D.mode D.debug_cc
   return                $  filter (not . null) $
     [ "-arch=compute_" ++ show m ++ show n
     , if warnings then ""   else "--disable-warnings"
