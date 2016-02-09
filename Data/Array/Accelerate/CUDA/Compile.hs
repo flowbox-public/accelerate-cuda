@@ -50,36 +50,24 @@ import Control.Monad.Trans                                      ( liftIO, MonadI
 import Control.Concurrent
 import Crypto.Hash.MD5                                          ( hashlazy )
 import Data.List                                                ( intercalate )
-import Data.Bits
+import Data.FileEmbed                                           ( embedDir )
 import Data.Maybe
 import Data.Monoid
-import System.Directory
-import System.Exit                                              ( ExitCode(..) )
-import System.FilePath
-import System.IO
-import System.IO.Error
 import System.IO.Unsafe
 import System.Mem.Weak
-import System.Process
 import Text.PrettyPrint.Mainland                                ( ppr, renderCompact, displayS )
 import qualified Data.ByteString                                as B
 import qualified Data.ByteString.Char8                          as BC
 import qualified Data.Text.Lazy                                 as T
-import qualified Data.Text.Lazy.IO                              as T
 import qualified Data.Text.Lazy.Encoding                        as T
-import qualified Control.Concurrent.MSem                        as Q
 import qualified Foreign.CUDA.Driver                            as CUDA
 import qualified Foreign.CUDA.Analysis                          as CUDA
 import qualified Foreign.CUDA.NVRTC.Error                       as CUDA
 import qualified Foreign.CUDA.NVRTC.Compile                     as CUDA
 
-import GHC.Conc                                                 ( getNumProcessors )
-
 #ifdef ACCELERATE_DEBUG
 import System.Time
 #endif
-
-import Paths_accelerate_cuda                                    ( getDataDir )
 
 
 -- | Initiate code generation, compilation, and data transfer for an array
@@ -427,13 +415,10 @@ compile table dev cunit = do
 --
 compileFlags :: CIO [String]
 compileFlags = do
-  CUDA.Compute m n      <- CUDA.computeCapability `fmap` asks deviceProperties
-  ddir                  <- liftIO getDataDir
-  let possibleCudaDir   =  ddir </> "cubits"
-  cudaDirExists         <- liftIO $ doesDirectoryExist possibleCudaDir
+  CUDA.Compute m n <- CUDA.computeCapability `fmap` asks deviceProperties
   let warnings = D.mode D.dump_cc && D.mode D.verbose
       debug    = D.mode D.debug_cc
-  return                $  filter (not . null) $
+  return       $ filter (not . null) $
     [ "-arch=compute_" ++ show m ++ show n
     , if warnings then ""   else "--disable-warnings"
     , if debug    then ""   else "-DNDEBUG"
@@ -442,17 +427,7 @@ compileFlags = do
     ]
 
 headers :: [(String, String)]
-headers = unsafePerformIO $ do
-    let files = [ "accelerate_cuda.h"
-                , "accelerate_cuda_assert.h"
-                , "accelerate_cuda_exceptional.h"
-                , "accelerate_cuda_function.h"
-                , "accelerate_cuda_texture.h"
-                , "accelerate_cuda_type.h"
-                ]
-    ddir <- getDataDir
-    contents <- mapM readFile (map (\x -> ddir </> "cubits" </> x) files)
-    return $ zip files contents
+headers = map (\(a,b) -> (a, BC.unpack b)) $ $(embedDir "cubits")
 
 compileKernel :: String -> String -> [String] -> IO (MVar B.ByteString)
 compileKernel code funName flags = do

@@ -91,6 +91,7 @@ Library
                         cuda                    >= 0.7,
                         directory               >= 1.0,
                         fclabels                >= 2.0,
+                        file-embed                    ,
                         filepath                >= 1.0,
                         hashable                >= 1.1,
                         hashtables              >= 1.0.1,
