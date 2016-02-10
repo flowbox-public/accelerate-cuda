@@ -17,7 +17,7 @@
  * Exceptional values have slightly different names than what are produced by
  * the code generator.
  */
-#ifdef __CUDACC_RTC__
+#ifndef __CUDACC_RTC__
 #include <math.h>
 #endif
 
