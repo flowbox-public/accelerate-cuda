@@ -113,9 +113,8 @@ theState
 --
 {-# NOINLINE defaultContext #-}
 defaultContext :: Context
-defaultContext = unsafePerformIO $ do
+defaultContext = unsafePerformIO $ runInBoundThread $ do
   message dump_gc "gc: initialise default context"
   CUDA.initialise []
   (dev,_)       <- selectBestDevice
   create dev [CUDA.SchedAuto]
-
